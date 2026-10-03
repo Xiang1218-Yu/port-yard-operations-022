@@ -69,6 +69,25 @@ export function gateConflicts() {
   return result;
 }
 export function yardHeatmap() { return blocks.map(block => ({ ...block, utilization: block.occupied / block.capacity, freeSlots: block.capacity - block.occupied, pressure: block.heat > 85 ? 'critical' : block.heat > 65 ? 'warning' : 'normal' })); }
+export interface ContainerQuery { q?: string; voyageId?: string; direction?: string; status?: string; customs?: string; priority?: string; reefer?: string; hazmat?: string; appointment?: string; }
+export function filterContainers(query: ContainerQuery) {
+  const text = query.q?.trim().toLowerCase();
+  return containers.filter(container => {
+    if (text && !container.id.toLowerCase().includes(text)) return false;
+    if (query.voyageId && container.voyageId !== query.voyageId) return false;
+    if (query.direction && container.direction !== query.direction) return false;
+    if (query.status && container.status !== query.status) return false;
+    if (query.customs && container.customs !== query.customs) return false;
+    if (query.priority && container.priority !== query.priority) return false;
+    if (query.reefer === 'yes' && !container.reefer) return false;
+    if (query.reefer === 'no' && container.reefer) return false;
+    if (query.hazmat === 'yes' && !container.hazmatClass) return false;
+    if (query.hazmat === 'no' && container.hazmatClass) return false;
+    if (query.appointment === 'linked' && !container.appointmentId) return false;
+    if (query.appointment === 'unlinked' && container.appointmentId) return false;
+    return true;
+  });
+}
 export function containerPlan(containerId: string) {
   const container = containers.find(c => c.id === containerId); if (!container) return undefined;
   const reasons: string[] = []; const candidates = blocks.filter(block => block.capacity > block.occupied && (!container.hazmatClass || block.hazmatAllowed) && (!container.reefer || block.reeferPlugs > block.usedPlugs));
