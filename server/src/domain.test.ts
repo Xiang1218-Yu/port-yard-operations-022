@@ -4,6 +4,22 @@ test('gate conflict engine detects same truck overlap', () => { const conflicts 
 test('yard planner respects reefer and hazmat constraints', () => { const plan = containerPlan('TGHU-9831204'); assert.equal(plan?.recommendedBlock?.hazmatAllowed, true); assert.ok(plan?.reasons.some(reason => reason.includes('危险品'))); });
 test('priority queue promotes customs inspection work', () => { const tasks = prioritizeTasks(); assert.equal(tasks[0].containerId, 'TGHU-9831204'); });
 
+test('container register supports combined filters for duty workflows', async () => {
+  const { filterContainers } = await import('./domain.js');
+  const reeferInspection = filterContainers({ reefer: 'yes', customs: 'inspection' });
+  assert.deepEqual(reeferInspection.map(item => item.id), ['TEMU-1774029']);
+  const searched = filterContainers({ search: 'mscu-48', voyageId: 'VOY-AX7', direction: 'import' });
+  assert.deepEqual(searched.map(item => item.id), ['MSCU-4829017']);
+  const hazmatHold = filterContainers({ hazmat: 'yes', status: 'hold' });
+  assert.deepEqual(hazmatHold.map(item => item.id), ['TGHU-9831204']);
+  const withAppointment = filterContainers({ appointment: 'yes' });
+  assert.ok(withAppointment.length > 0 && withAppointment.every(item => item.appointmentId));
+  const withoutAppointment = filterContainers({ appointment: 'no' });
+  assert.ok(withoutAppointment.every(item => !item.appointmentId));
+  assert.equal(filterContainers({ status: 'released', customs: 'hold' }).length, 0);
+  assert.equal(filterContainers({}).length, filterContainers({ search: '  ' }).length);
+});
+
 test('container create, update and delete form a complete audited CRUD cycle', async () => {
   const { createContainer, updateContainer, deleteContainer, containers } = await import('./domain.js');
   const created = createContainer({ id: 'TEST-CRUD-0001', voyageId: 'VOY-AX7', size: '20', isoType: '22G1', direction: 'import', status: 'in-yard', weightT: 10, reefer: false, customs: 'released', priority: 'normal', yardSlot: 'C03-R11-T1' });

@@ -54,6 +54,20 @@ export const tasks: YardTask[] = [
 export const auditEvents: AuditEvent[] = [{ id: 'AUD-500', actor: '中控调度员', action: 'REPLAN', entity: 'voyage', entityId: 'VOY-AX7', at: new Date(start - 20 * 60000).toISOString(), details: '因 QC-07 瞬时降速，重新计算 14 个高优先级作业' }];
 
 function parseSlot(slot: string) { const match = slot.match(/^([A-Z]\d\d)-/); return match?.[1]; }
+export interface ContainerQuery { search?: string; voyageId?: string; direction?: string; status?: string; customs?: string; priority?: string; reefer?: string; hazmat?: string; appointment?: string; }
+export function filterContainers(query: ContainerQuery) {
+  const term = query.search?.trim().toUpperCase();
+  return containers.filter(item =>
+    (!term || item.id.includes(term)) &&
+    (!query.voyageId || item.voyageId === query.voyageId) &&
+    (!query.direction || item.direction === query.direction) &&
+    (!query.status || item.status === query.status) &&
+    (!query.customs || item.customs === query.customs) &&
+    (!query.priority || item.priority === query.priority) &&
+    (query.reefer !== 'yes' || item.reefer) && (query.reefer !== 'no' || !item.reefer) &&
+    (query.hazmat !== 'yes' || Boolean(item.hazmatClass)) && (query.hazmat !== 'no' || !item.hazmatClass) &&
+    (query.appointment !== 'yes' || Boolean(item.appointmentId)) && (query.appointment !== 'no' || !item.appointmentId));
+}
 export function dashboard() {
   const activeVoyages = voyages.filter(v => v.status !== 'departed');
   const yardCapacity = blocks.reduce((sum, block) => sum + block.capacity, 0); const yardOccupied = blocks.reduce((sum, block) => sum + block.occupied, 0);
